@@ -61,14 +61,14 @@ bool isInRange (char c) @safe pure nothrow @nogc
 { return c >= Alphabet[0] && c <= Alphabet[$-1]; }
 
 immutable string[] SpecialNames = [
-    "genes",
-    "cmmns",
-    "vald2",
-    "vald3",
-    "vald4",
-    "vald5",
-    "vald6",
-    "vald7",
+    // "genes",
+    // "cmmns",
+    // "zval2",
+    // "zval3",
+    "val4",
+    "val5",
+    "val6",
+    "val7",
 ];
 
 /// Stored globally to avoid large stack / TLS issues
@@ -84,7 +84,6 @@ void main (string[] args)
 
     foreach (_; parallel(iota(42)))
     {
-    NextKey:
         while (atomicLoad(found) < result.length)
         {
             auto tmp = Pair.random();
@@ -94,59 +93,9 @@ void main (string[] args)
 
             if (auto index = specialNameIndex(addr))
             {
-                // If already found, still print it as they are pretty rare
-                if (!found.onFound(index, tmp.v))
-                {
-                    stderr.writeln("\nFound another candidate for special names: ",
-                                 addr, SecretKey(tmp.v).toString(PrintMode.Clear));
-                    continue NextKey;
-                }
-
-                stderr.writeln("\nFound special name: ", addr, " - ",
-                               SecretKey(tmp.v).toString(PrintMode.Clear));
+                stderr.writefln("// %s %s static immutable XX = KeyPair(PublicKey(Point(%s)), SecretKey(Scalar(%s)));",
+                    addr, SecretKey(tmp.v).toString(PrintMode.Clear), tmp.V[], tmp.v[]);
                 continue NextKey;
-            }
-
-            // Find match for letter(s)
-            if (!isInRange(addr[FirstIdx]))
-                continue;
-
-            size_t endMarkerSeen;
-            immutable MarkerStart = LastIdx - FirstIdx;
-        Search:
-            foreach (size_t idx, char c; addr[FirstIdx .. LastIdx + MarkerCount])
-            {
-                switch (c)
-                {
-                    // Maybe a match?
-                case EndMarker:
-                    // All good
-                    if (++endMarkerSeen >= MarkerCount)
-                    {
-                        const name = addr[FirstIdx .. FirstIdx + 1 + idx - MarkerCount];
-                        const index = nameIndex(name);
-                        // Whether we already found it or not, we go to the next key
-                        // We might get an index that is out of range, for example
-                        // get found zzz but we only want up to 'azz'.
-                        // In this case we can't call `onFound` because it would
-                        // either assert or override a special key, as they are
-                        // just stored after the keys.
-                        if (index < KeyCountTarget)
-                            found.onFound(index, tmp.v);
-                        continue NextKey;
-                    }
-                    continue Search;
-
-                // Longer key, store it and keep looking
-                case 'a': .. case 'z':
-                    if (endMarkerSeen || idx >= MarkerStart)
-                        continue NextKey;
-                    continue Search;
-
-                    // No match
-                default:
-                    continue NextKey;
-                }
             }
         }
     }
@@ -208,6 +157,25 @@ private size_t specialNameIndex (const(char)[] name)
     }
 
     return 0;
+}
+
+///
+// Found another candidate for special names: boa1xzval5q9lwrvhsg3wdgz8gdt9z0e8ke028u5pznlg33zpdxnm5w0sxjzmt5 SC3ADWYP7SPIAFWOH7SWHYDNBITZOOL7TUIMRTW2IRKZPNUIFFLQ2D2G
+
+// Found another candidate for special names: boa1xzval5x7nh9fsnvs6kue6n8j75lxvl3mus3m30xjqk0u4wmkhqrk503e63x SBE3S543JDB4PBPYUNSIKOR755WP4KSQI5EY6MX3LFOI5NSE7GLATLMS
+
+// Found another candidate for special names: boa1xzval4cdm8sj6etl5zkqhpx3qlpgwvv502fnqwrff7lnphacdwcmujfgg2j SBVWONNXGT4LVA4RB76K55V4XLGSKEHVNBC2YNPR545IBCTGEHVA5WXL
+
+// Found another candidate for special names: boa1xzval5u6zytv0n9p5p7asfjnxymfq9a9x3m8062vce93lf66th8076alyad SAVB75Y6J2ELWFDVSPW2366TWSAILQJI7VY6LR6PCIUBS4ASSCIAJ4PK
+unittest
+{
+    immutable seedStr = `SBVWONNXGT4LVA4RB76K55V4XLGSKEHVNBC2YNPR545IBCTGEHVA5WXL`;
+    KeyPair kp = KeyPair.fromSeed(SecretKey.fromString(seedStr));
+    import std.stdio;
+    writefln("//%s %s\nstatic immutable %s = KeyPair(PublicKey(Point(%s)), SecretKey(Scalar(%s)));",
+                kp.address, SecretKey(kp.secret).toString(PrintMode.Clear), kp.address[], kp.secret[]);
+    assert(kp.secret.toString(PrintMode.Clear) == seedStr,
+        kp.secret.toString(PrintMode.Clear));
 }
 
 //
