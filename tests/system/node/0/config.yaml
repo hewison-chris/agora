@@ -59,3 +59,8 @@ network:
   - http://node-4:4735
   - http://node-5:5735
   - http://node-6:6735
+
+logging:
+  root:
+    level: Info
+    console: true

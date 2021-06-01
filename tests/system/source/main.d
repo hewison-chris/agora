@@ -27,6 +27,7 @@ import agora.utils.Test;
 import vibe.web.rest;
 
 import std.algorithm;
+import std.datetime;
 import std.exception;
 import std.format;
 import std.range;
@@ -39,11 +40,16 @@ immutable string PREFIX = ">>CI:";
 
 int main (string[] args)
 {
-    writefln("%s START SYSTEM TEST", PREFIX);
+    void log (string message)
+    {
+        writefln("%s [%s] %s", PREFIX, Clock.currTime().toISOString , message);
+    }
+
+    log("START SYSTEM TEST");
     if (args.length < 2)
     {
-        writefln("%s You must enter addresses of the nodes to connect to.", PREFIX);
-        writefln("%s   eg.) http://127.0.0.1:4000 http://127.0.0.1:4001 http://127.0.0.1:4002 ...", PREFIX);
+        log("You must enter addresses of the nodes to connect to.");
+        log("  eg.) http://127.0.0.1:4000 http://127.0.0.1:4001 http://127.0.0.1:4002 ...");
         return 1;
     }
     /// Address array of nodes
@@ -60,26 +66,27 @@ int main (string[] args)
     }
 
     // keep polling the nodes for a complete network discovery, until a timeout
-    writefln("%s waitForDiscovery", PREFIX);
+    log("waitForDiscovery");
     const discovery_duration = 60.seconds;
     clients.enumerate.each!((idx, client) =>
     {
         retryFor(client.getNodeInfo().ifThrown(NodeInfo.init)
             .state == NetworkState.Complete,
             discovery_duration,
-            format("%s %s has not completed discovery after %s.",
-                PREFIX, nodeFromClientIndex(idx), discovery_duration * (idx + 1)));
+            format!"%s has not completed discovery after %s."
+                (nodeFromClientIndex(idx), discovery_duration * (idx + 1)));
     }());
+    log("Discovery complete");
 
     /// Check block generation
     void assertBlockHeightAtleast (ulong height)
     {
         Hash block_hash;
         const Duration retry_delay = 500.msecs;
-        const Duration max_duration = 30.seconds;
+        const Duration max_duration = 60.seconds;
         foreach (idx, ref client; clients)
         {
-            writefln("%s Check block height is %s for %s", PREFIX, height, nodeFromClientIndex(idx));
+            log(format!"Check block height is %s for %s"(height, nodeFromClientIndex(idx)));
             ulong node_height;
             Duration duration = 0.seconds;
             do
@@ -87,43 +94,43 @@ int main (string[] args)
                 node_height = client.getBlockHeight();
                 if (node_height < height) // Only sleep when we need to
                 {
-                    writefln("%s %s has height %s not yet height %s: sleep %s (so far %s out of %s max) ",
-                        PREFIX, nodeFromClientIndex(idx), node_height, height, retry_delay,
-                        duration == 0.seconds ? "0 secs" : duration.toString(), max_duration);
+                    log(format!"%s has height %s not yet height %s: sleep %s (so far %s out of %s max) "
+                        (nodeFromClientIndex(idx), node_height, height, retry_delay,
+                        duration == 0.seconds ? "0 secs" : duration.toString(), max_duration));
                     Thread.sleep(retry_delay);
                 }
                 else
                 {
-                    writefln("%s %s is at block height %s", PREFIX, nodeFromClientIndex(idx), node_height);
+                    log(format!"%s is at block height %s"(nodeFromClientIndex(idx), node_height));
                     const blocks = client.getBlocksFrom(height, 10);
-                    writefln("%s %s has blocks:\n%s", PREFIX, nodeFromClientIndex(idx), prettify(blocks));
-                    writefln("%s ----------------------------------------", PREFIX);
+                    log(format!"%s has blocks:\n%s"(nodeFromClientIndex(idx), prettify(blocks)));
+                    log("----------------------------------------");
                 }
                 duration += retry_delay;
             }
             while (node_height < height && duration < max_duration); // Retry if we're too early
             assert(node_height >= height,
-                format!"%s %s still has block height %s less than expected height %s after more than %s"
-                    (PREFIX, nodeFromClientIndex(idx), node_height, height, duration));
+                format!"%s still has block height %s less than expected height %s after more than %s"
+                    (nodeFromClientIndex(idx), node_height, height, duration));
         }
     }
 
     clients.enumerate.each!((idx, client) =>
     {
-        writefln("%s %s info: %s", PREFIX, nodeFromClientIndex(idx), client.getNodeInfo());
+        log(format!"%s info: %s"(nodeFromClientIndex(idx), client.getNodeInfo()));
         const height = client.getBlockHeight();
-        writefln("%s %s has block height %s", PREFIX, nodeFromClientIndex(idx), height);
-        writefln("%s ----------------------------------------", PREFIX);
+        log(format!"%s has block height %s"(nodeFromClientIndex(idx), height));
+        log("----------------------------------------");
     }());
 
     // Make sure the nodes use the test genesis block
     const blocks = clients[0].getBlocksFrom(0, 1);
     assert(blocks.length == 1);
-    assert(blocks[0] == TestGenesis.GenesisBlock, format!"%s Not using expected TestGenesis.GenesisBlock"(PREFIX));
+    assert(blocks[0] == TestGenesis.GenesisBlock, "Not using expected TestGenesis.GenesisBlock");
 
     auto target_height = 42;
     iota(target_height).each!(h => assertBlockHeightAtleast(h));
-    writefln("%s All nodes reached target height %s", PREFIX, target_height);
+    log(format!"All nodes reached target height %s"(target_height));
 
     return 0;
 }
