@@ -5,3 +5,6 @@
 # https://github.com/wolfpld/tracy/blob/57d636f2432048d6b209568afb3b8ec90d0aafae/client/TracyProfiler.cpp#L241
 # This is specific to the environment exposed by the VM and might not trigger on your machine.
 TRACY_NO_INVARIANT_CHECK=1
+
+# For system integration tests we can override the timestamp
+GENESIS_TIMESTAMP=1622770000

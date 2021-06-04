@@ -114,6 +114,8 @@ public immutable class ConsensusParams
 /// Ditto
 public struct ConsensusConfig
 {
+    /// This will be set to the initial time of Coinnet blockchain
+    /// (It should NEVER be overidden except in the case of testing)
     public ulong genesis_timestamp = 1609459200; // 2021-01-01:00:00:00 GMT
 
     /// The cycle length for a validator

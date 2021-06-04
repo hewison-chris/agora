@@ -19,6 +19,7 @@ services:
       - "./node/2/:/agora/"
       - "../../source:/agora/source/"
       - "../../submodules:/agora/submodules/"
+    entrypoint: [ "/usr/local/bin/agora", "-Oconsensus.genesis_timestamp=${GENESIS_TIMESTAMP}" ]
 
   node-3:
     image: "agora:latest"
@@ -29,6 +30,7 @@ services:
       - "./node/3/:/agora/"
       - "../../source:/agora/source/"
       - "../../submodules:/agora/submodules/"
+    entrypoint: [ "/usr/local/bin/agora", "-Oconsensus.genesis_timestamp=${GENESIS_TIMESTAMP}" ]
 
   node-4:
     image: "agora:latest"
@@ -39,6 +41,7 @@ services:
       - "./node/4/:/agora/"
       - "../../source:/agora/source/"
       - "../../submodules:/agora/submodules/"
+    entrypoint: [ "/usr/local/bin/agora", "-Oconsensus.genesis_timestamp=${GENESIS_TIMESTAMP}" ]
 
   node-5:
     image: "agora:latest"
@@ -49,6 +52,7 @@ services:
       - "./node/5/:/agora/"
       - "../../source:/agora/source/"
       - "../../submodules:/agora/submodules/"
+    entrypoint: [ "/usr/local/bin/agora", "-Oconsensus.genesis_timestamp=${GENESIS_TIMESTAMP}" ]
 
   node-6:
     image: "agora:latest"
@@ -59,6 +63,7 @@ services:
       - "./node/6/:/agora/"
       - "../../source:/agora/source/"
       - "../../submodules:/agora/submodules/"
+    entrypoint: [ "/usr/local/bin/agora", "-Oconsensus.genesis_timestamp=${GENESIS_TIMESTAMP}" ]
 
   node-7:
     image: "agora:latest"
@@ -69,6 +74,7 @@ services:
       - "./node/7/:/agora/"
       - "../../source:/agora/source/"
       - "../../submodules:/agora/submodules/"
+    entrypoint: [ "/usr/local/bin/agora", "-Oconsensus.genesis_timestamp=${GENESIS_TIMESTAMP}" ]
 
   # non-validator node
   node-0:
@@ -80,6 +86,7 @@ services:
       - "./node/0/:/agora/"
       - "../../source:/agora/source/"
       - "../../submodules:/agora/submodules/"
+    entrypoint: [ "/usr/local/bin/agora", "-Oconsensus.genesis_timestamp=${GENESIS_TIMESTAMP}" ]
 
   # faucet
   faucet:

@@ -578,6 +578,7 @@ node:
 /// Parse Consensus parameters
 private ConsensusConfig parseConsensusConfig (Node* node, in CommandLine cmdln)
 {
+    const genesis_timestamp = get!(ulong, "consensus", "genesis_timestamp")(cmdln, node);
     const validator_cycle = get!(uint, "consensus", "validator_cycle")(cmdln, node);
     const max_quorum_nodes = get!(uint, "consensus", "max_quorum_nodes")(cmdln, node);
     const quorum_threshold = get!(uint, "consensus", "quorum_threshold")(cmdln, node);
@@ -592,6 +593,7 @@ private ConsensusConfig parseConsensusConfig (Node* node, in CommandLine cmdln)
         throw new Exception("consensus.quorum_threshold is a percentage and must be between 1 and 100, included");
 
     ConsensusConfig result = {
+        genesis_timestamp: genesis_timestamp,
         validator_cycle: validator_cycle,
         max_quorum_nodes: max_quorum_nodes,
         quorum_threshold: quorum_threshold,
