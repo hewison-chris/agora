@@ -99,4 +99,6 @@ services:
       - node-5
       - node-6
       - node-7
-    command: [ "-c", "none", "http://node-7:7826" ]
+    volumes:
+      - "../../ci/:/root/ci/"
+    command: [ "-c", "/root/ci/faucet.yaml" ]
