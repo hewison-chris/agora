@@ -254,6 +254,19 @@ unittest
     }
 }
 
+version (none) // print all seeds from `WellKnownKeys` file
+unittest
+{
+    import std.algorithm;
+    WK.Keys.byRange.each!((key)
+    {
+        debug {
+            import std.stdio : writefln;
+            try { writefln!"    - %s"(key.secret.toString(PrintMode.Clear)); }
+            catch (Exception) {} }
+    });
+}
+
 /***************************************************************************
 
     Takes a block object and filters the payment outputs
