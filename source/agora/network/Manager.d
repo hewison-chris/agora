@@ -1014,7 +1014,7 @@ public class NetworkManager
             auto start_height = Height(max(1, ledger.getBlockHeight - recent_block_count));
             BlockHeader[] headers = ledger.getBlocksFrom(start_height).map!(block => block.header).array;
             size_t[Height] enrolled_validators = headers.map!(header =>
-                tuple(header.height, ledger.enrollment_manager().getCountOfValidators(header.height))).assocArray;
+                tuple(header.height, header.validators.length)).assocArray;
 
             Set!ulong heightsMissingSigs ()
             {
@@ -1044,6 +1044,7 @@ public class NetworkManager
                             {
                                 try
                                 {
+                                    log.trace("getMissingBlockSigs: updating header signature: {} validators: {}", header.signature, header.validators);
                                     ledger.updateBlockMultiSig(header);
                                 }
                                 catch (Exception e)
