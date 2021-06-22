@@ -176,12 +176,5 @@ unittest
 
     auto nodes = network.clients;
     assert(nodes[0].getQuorumConfig().threshold == 4); // We should need 4 nodes
-    auto spendable = network.blocks[$ - 1].spendable().array;
-
-    // discarded UTXOs (just to trigger block creation)
-    auto txs = spendable[0 .. 8].map!(txb => txb.sign()).array;
-
-    // try to make block 1
-    txs.each!(tx => nodes[0].putTransaction(tx));
-    network.expectHeightAndPreImg(iota(1, GenesisValidators), Height(1), network.blocks[0].header);
+    network.generateBlocks(only(1, 2, 3, 4), Height(1));
 }
