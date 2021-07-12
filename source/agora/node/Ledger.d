@@ -856,17 +856,6 @@ public class Ledger
         }
 
         assert(validators.length == block.header.validators.count);
-        // Check that more than half have signed
-        auto signed = block.header.validators.setCount;
-        if (signed <= validators.length / 2)
-        {
-            log.error("Block#{}: Signatures are not majority: {}/{}, signers: {}",
-                      block.header.height, signed, validators.length,
-                      block.header.validators);
-            return "The majority of validators hasn't signed this block";
-        }
-
-        log.trace("Checking signature, participants: {}/{}", signed, validators.length);
         foreach (idx, validator; validators)
         {
             const K = validator.address;

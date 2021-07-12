@@ -628,24 +628,6 @@ extern(D):
                     envelope.statement.pledges.confirm_.ballot.value, ex);
                 return;
             }
-
-            // If it's an old envelope, we're only interested in the signature
-            if (envelope.statement.slotIndex <= last_block.header.height)
-            {
-                const sig = ValidatorBlockSig(
-                    Height(envelope.statement.slotIndex), public_key,
-                    Scalar(envelope.statement.pledges.confirm_.value_sig));
-                auto blocks = this.ledger.getBlocksFrom(Height(envelope.statement.slotIndex));
-                if (this.collectBlockSignature(sig, blocks[0].hashFull()))
-                    log.trace("Added signature for {} from CONFIRM ballot", public_key);
-                else
-                    log.info("Couldn't add signature for {}'s CONFIRM ballot", public_key);
-                return;
-            }
-
-            Hash random_seed = this.ledger.getRandomSeed(
-                last_block.header.height + 1, con_data.missing_validators);
-
             Transaction[] received_tx_set;
             if (auto fail_reason = this.ledger.getValidTXSet(con_data, received_tx_set))
             {
@@ -653,16 +635,7 @@ extern(D):
                     scpPrettify(&envelope));
                 return; // We dont have all the TXs for this block. Try to catchup
             }
-            const Block proposed_block = makeNewBlock(last_block,
-                received_tx_set, con_data.time_offset, random_seed,
-                this.enroll_man.getCountOfValidators(last_block.header.height + 1),
-                con_data.enrolls, con_data.missing_validators);
-            const block_sig = ValidatorBlockSig(Height(envelope.statement.slotIndex),
-                public_key, Scalar(envelope.statement.pledges.confirm_.value_sig));
-            if (!this.collectBlockSignature(block_sig, proposed_block.hashFull()))
-                return;
         }
-
         auto shared_env = this.wrapEnvelope(envelope);
         if (this.scp.receiveEnvelope(shared_env) != SCP.EnvelopeState.VALID)
             log.trace("SCP indicated invalid envelope: {}", scpPrettify(&envelope));
@@ -823,15 +796,6 @@ extern(D):
                 signed_tx_set, con_data.time_offset, random_seed,
                 this.enroll_man.getCountOfValidators(last_block.header.height + 1),
                 con_data.enrolls, con_data.missing_validators);
-
-            const Signature sig = createBlockSignature(proposed_block);
-
-            envelope.statement.pledges.confirm_.value_sig = opaque_array!32(BitBlob!32(sig.s[]));
-
-            // Store our block signature in the slot_sigs map
-            log.trace("signConfirmBallot: ADD block signature at height {} for this node {}",
-                last_block.header.height + 1, this.kp.address);
-            this.slot_sigs[last_block.header.height + 1][this.kp.address] = sig;
         }
         catch (Exception e)
         {
@@ -994,20 +958,14 @@ extern(D):
                 data.enrolls, data.missing_validators);
 
             // If we did not sign yet then add signature and gossip to other nodes
-            if (this.kp.address !in this.slot_sigs[height])
+            if (height !in this.slot_sigs || this.kp.address !in this.slot_sigs[height])
             {
                 log.trace("ADD BLOCK SIG at height {} for this node {}", height, this.kp.address);
                 this.slot_sigs[height][this.kp.address] = this.createBlockSignature(block);
-            }
-
-            const signed_block = this.updateMultiSignature(block);
-            if (signed_block == Block.init)
-            {
-                log.warn("Not ready to externalize this block at height {} on node {}", height, this.kp.address);
                 gossipBlockSignature(ValidatorBlockSig(height, this.kp.address,
                     this.slot_sigs[height][this.kp.address].s));
-                return;
             }
+            const signed_block = this.updateMultiSignature(block);
             this.verifyBlock(signed_block);
         }
         catch (Exception exc)
@@ -1015,8 +973,6 @@ extern(D):
             log.fatal("Externalization of SCP data failed: {}", exc);
             abort();
         }
-        this.gossipBlockSignature(ValidatorBlockSig(height, this.kp.address,
-                    this.slot_sigs[height][this.kp.address].s));
         this.nomination_start_time = 0;
         this.initial_missing_validators = [];
     }
@@ -1046,7 +1002,7 @@ extern(D):
         this.network.gossipBlockSignature(block_sig);
     }
 
-    /// If more than half have signed create a combined Schnorr multisig and return the updated block
+    /// Create a combined Schnorr multisig and return the updated block
     private Block updateMultiSignature (in Block block) @safe
     {
         auto all_validators = this.enroll_man.getCountOfValidators(block.header.height);
@@ -1069,13 +1025,6 @@ extern(D):
                 return Block.init;
             }
             validator_mask[idx] = true;
-        }
-        // There must exist signatures for at least half the validators to externalize
-        if (block_sigs.length <= all_validators / 2)
-        {
-            log.warn("Only {} signed. Require more than {} out of {} validators to sign for externalizing slot height {}.",
-                block_sigs.length, all_validators / 2, all_validators, block.header.height);
-            return Block.init;
         }
         Block signed_block = block.updateSignature(
             multiSigCombine(block_sigs.byValue), validator_mask);
